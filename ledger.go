@@ -125,14 +125,14 @@ func listTask(long *bool) {
 	}
 	fmt.Fprintln(gDisplay, "ID\tOPENED\tTASK")
 	for _, task := range taskArray {
-		var tId string
+		var tID string
 		if *long == true {
-			tId = task.TaskID
+			tID = task.TaskID
 		} else {
-			tId = fmt.Sprintf("%s..", task.TaskID[32:39])
+			tID = fmt.Sprintf("%s..", task.TaskID[32:39])
 		}
 		if task.Closed == 0 {
-			fmt.Fprintf(gDisplay, "%s\t%v\t%s\n", tId, task.Opened, task.Desc)
+			fmt.Fprintf(gDisplay, "%s\t%v\t%s\n", tID, task.Opened, task.Desc)
 		}
 	}
 	gDisplay.Flush()
@@ -145,7 +145,7 @@ func cli() {
 		fmt.Fprintf(os.Stderr, "Usage: %s\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "\tadd\t\tadd a new task\n")
 		fmt.Fprintf(os.Stderr, "\tdump\t\tdump contents of task file\n")
-		fmt.Fprintf(os.Stderr, "\tlist\t\tdisplay list of tasks\n")
+		fmt.Fprintf(os.Stderr, "\tls\t\tdisplay list of tasks\n")
 		fmt.Fprintf(os.Stderr, "\thelp\t\tdisplay this help text\n")
 		os.Exit(1)
 	}
@@ -161,7 +161,7 @@ func cli() {
 	formatPtr := dumpCmd.String("format", "text", "<text|json|yaml>")
 
 	// listCmd
-	longPtr := listCmd.Bool("long", false, "print long ID")
+	longPtr := listCmd.Bool("l", false, "print long ID")
 
 	// verify subcommand provided
 	if len(os.Args) < 2 {
@@ -173,7 +173,7 @@ func cli() {
 		addCmd.Parse(os.Args[2:])
 	case "dump":
 		dumpCmd.Parse(os.Args[2:])
-	case "list":
+	case "ls":
 		listCmd.Parse(os.Args[2:])
 	case "--help", "-h", "help":
 		flag.Usage()
