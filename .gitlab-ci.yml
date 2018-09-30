@@ -2,6 +2,13 @@ stages:
   - build
   - test
 
+code_copy:
+  stage: test
+  script: 
+    - cp -r * /home/devops/code/ledger/
+    - chown -R devops:devops /home/devops/code/goledger/
+  tags:
+    - deploy
 build_ledger:
   stage: test
   script: go build
