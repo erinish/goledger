@@ -41,6 +41,79 @@ func config() {
 		panic(err)
 	}
 }
+
+func addTask(autoClose *bool, args []string) {
+	var task Task
+	f, err := os.OpenFile("/tmp/task", os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		f, err = os.Create("/tmp/task")
+		if err != nil {
+			fmt.Println("could not create file.")
+			os.Exit(1)
+		}
+	}
+	w := bufio.NewWriter(f)
+	defer f.Close()
+
+	if len(args) < 1 {
+		fmt.Println("missing required task description.")
+		os.Exit(1)
+	}
+
+	if *autoClose == true {
+		task = Task{strings.Join(args, " "), time.Now().Unix(), time.Now().Unix(), genTaskID()}
+	} else {
+		task = Task{strings.Join(args, " "), time.Now().Unix(), 0, genTaskID()}
+	}
+
+	j, err := json.Marshal(&task)
+
+	if err == nil {
+		w.Write(j)
+		w.WriteString("\n")
+		w.Flush()
+	} else {
+		fmt.Println("error encoding JSON")
+		os.Exit(1)
+	}
+
+}
+
+func dumpTask(format *string) {
+	f, err := os.Open("/tmp/task")
+	if err != nil {
+		fmt.Println("could not open file.")
+		os.Exit(1)
+	}
+	scanner := bufio.NewScanner(f)
+	if *format == "text" {
+		for scanner.Scan() {
+			fmt.Println(scanner.Text())
+		}
+	}
+}
+
+func listTask() {
+	var taskArray []Task
+	f, err := os.Open("/tmp/task")
+	if err != nil {
+		fmt.Println("could not open file.")
+		os.Exit(1)
+	}
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		var msg Task
+		err := json.Unmarshal(scanner.Bytes(), &msg)
+		if err != nil {
+			fmt.Println("error unmarshalling JSON")
+			os.Exit(1)
+		}
+		taskArray = append(taskArray, msg)
+		fmt.Printf("%v", msg)
+	}
+}
+
 func cli() {
 
 	// override default Usage
@@ -58,78 +131,11 @@ func cli() {
 
 	// addCmd
 	autoClosePtr := addCmd.Bool("closed", false, "automatically close a new task")
-	func addTask() {
-		var task Task
-		f, err := os.OpenFile("/tmp/task", os.O_APPEND|os.O_WRONLY, 0666)
-		if err != nil {
-			f, err = os.Create("/tmp/task")
-			if err != nil {
-				fmt.Println("could not create file.")
-				os.Exit(1)
-			}
-		}
-		w := bufio.NewWriter(f)
-		defer f.Close()
-
-		if len(addCmd.Args()) < 1 {
-			fmt.Println("missing required task description.")
-			os.Exit(1)
-		}
-
-		if *autoClosePtr == true {
-			task = Task{strings.Join(addCmd.Args(), " "), time.Now().Unix(), time.Now().Unix(), genTaskID()}
-		} else {
-			task = Task{strings.Join(addCmd.Args(), " "), time.Now().Unix(), 0, genTaskID()}
-		}
-
-		j, err := json.Marshal(&task)
-
-		if err == nil {
-			w.Write(j)
-			w.WriteString("\n")
-			w.Flush()
-		} else {
-			fmt.Println("error encoding JSON")
-			os.Exit(1)
-		}
-
-	}
 
 	// dumpCmd
 	formatPtr := dumpCmd.String("format", "text", "<text|json|yaml>")
-	func dumpTask() {
-		f, err := os.Open("/tmp/task")
-		if err != nil {
-			fmt.Println("could not open file.")
-			os.Exit(1)
-		}
-		scanner := bufio.NewScanner(f)
-		if *formatPtr == "text" {
-			for scanner.Scan() {
-				fmt.Println(scanner.Text())
-			}
-		}
-	}
 
 	// listCmd
-	func listTask() {
-		var taskArray []Task
-		f, err := os.Open("/tmp/task")
-		if err != nil {
-			fmt.Println("could not open file.")
-			os.Exit(1)
-		}
-		for scanner.Scan() {
-			var msg Task
-			err := json.Unmarshal(scanner.Text(), &msg)
-			if err != nil {
-				fmt.Println("error unmarshalling JSON")
-				os.Exit(1)
-			}
-			taskArray = append(taskArray, msg)
-			fmt.Printf("%v", msg)
-		}
-	}
 
 	// verify subcommand provided
 	if len(os.Args) < 2 {
@@ -151,9 +157,9 @@ func cli() {
 	}
 
 	if addCmd.Parsed() {
-		addTask()
+		addTask(autoClosePtr, addCmd.Args())
 	} else if dumpCmd.Parsed() {
-		dumpTask()
+		dumpTask(formatPtr)
 	} else if listCmd.Parsed() {
 		listTask()
 	}

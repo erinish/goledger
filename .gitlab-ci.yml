@@ -1,0 +1,9 @@
+stages:
+  - build
+  - test
+
+build_ledger:
+  stage: test
+  script: go build
+  tags:
+    - deploy
