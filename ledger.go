@@ -105,7 +105,7 @@ func dumpTask(format *string) {
 	}
 }
 
-func listTask() {
+func listTask(long *bool) {
 	var taskArray []Task
 	f, err := os.Open(gTaskFile)
 	if err != nil {
@@ -123,10 +123,16 @@ func listTask() {
 		}
 		taskArray = append(taskArray, msg)
 	}
-
+	fmt.Fprintln(gDisplay, "ID\tOPENED\tTASK")
 	for _, task := range taskArray {
+		var tId string
+		if *long == true {
+			tId = task.TaskID
+		} else {
+			tId = fmt.Sprintf("%s..", task.TaskID[32:39])
+		}
 		if task.Closed == 0 {
-			fmt.Fprintf(gDisplay, "%s\t%v\t%s\n", task.TaskID, task.Opened, task.Desc)
+			fmt.Fprintf(gDisplay, "%s\t%v\t%s\n", tId, task.Opened, task.Desc)
 		}
 	}
 	gDisplay.Flush()
@@ -155,6 +161,7 @@ func cli() {
 	formatPtr := dumpCmd.String("format", "text", "<text|json|yaml>")
 
 	// listCmd
+	longPtr := listCmd.Bool("long", false, "print long ID")
 
 	// verify subcommand provided
 	if len(os.Args) < 2 {
@@ -180,7 +187,7 @@ func cli() {
 	} else if dumpCmd.Parsed() {
 		dumpTask(formatPtr)
 	} else if listCmd.Parsed() {
-		listTask()
+		listTask(longPtr)
 	}
 }
 
