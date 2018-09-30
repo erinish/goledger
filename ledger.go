@@ -11,6 +11,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
+	"text/tabwriter"
 	"time"
 )
 
@@ -22,6 +23,11 @@ type Task struct {
 	TaskID string
 }
 
+// Global Config
+var gWorkDir string
+var gTaskFile string
+var gDisplay *tabwriter.Writer
+
 func genTaskID() string {
 	rand.Seed(time.Now().UnixNano())
 	h := sha1.New()
@@ -30,7 +36,8 @@ func genTaskID() string {
 	return taskid
 }
 
-func config() {
+func config() (string, string, *tabwriter.Writer) {
+	// user dir and task file
 	curUser, err := user.Current()
 	if err != nil {
 		fmt.Println("unknown user")
@@ -40,13 +47,18 @@ func config() {
 	if err := os.Mkdir(workDir, 0777); !os.IsExist(err) && err != nil {
 		panic(err)
 	}
+	taskFile := filepath.Join(workDir, "tasks.json")
+
+	// writer
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	return workDir, taskFile, w
 }
 
 func addTask(autoClose *bool, args []string) {
 	var task Task
-	f, err := os.OpenFile("/tmp/task", os.O_APPEND|os.O_WRONLY, 0666)
+	f, err := os.OpenFile(gTaskFile, os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
-		f, err = os.Create("/tmp/task")
+		f, err = os.Create(gTaskFile)
 		if err != nil {
 			fmt.Println("could not create file.")
 			os.Exit(1)
@@ -80,7 +92,7 @@ func addTask(autoClose *bool, args []string) {
 }
 
 func dumpTask(format *string) {
-	f, err := os.Open("/tmp/task")
+	f, err := os.Open(gTaskFile)
 	if err != nil {
 		fmt.Println("could not open file.")
 		os.Exit(1)
@@ -95,7 +107,7 @@ func dumpTask(format *string) {
 
 func listTask() {
 	var taskArray []Task
-	f, err := os.Open("/tmp/task")
+	f, err := os.Open(gTaskFile)
 	if err != nil {
 		fmt.Println("could not open file.")
 		os.Exit(1)
@@ -110,8 +122,14 @@ func listTask() {
 			os.Exit(1)
 		}
 		taskArray = append(taskArray, msg)
-		fmt.Printf("%v", msg)
 	}
+
+	for _, task := range taskArray {
+		if task.Closed == 0 {
+			fmt.Fprintf(gDisplay, "%s\t%v\t%s\n", task.TaskID, task.Opened, task.Desc)
+		}
+	}
+	gDisplay.Flush()
 }
 
 func cli() {
@@ -121,6 +139,7 @@ func cli() {
 		fmt.Fprintf(os.Stderr, "Usage: %s\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "\tadd\t\tadd a new task\n")
 		fmt.Fprintf(os.Stderr, "\tdump\t\tdump contents of task file\n")
+		fmt.Fprintf(os.Stderr, "\tlist\t\tdisplay list of tasks\n")
 		fmt.Fprintf(os.Stderr, "\thelp\t\tdisplay this help text\n")
 		os.Exit(1)
 	}
@@ -166,6 +185,6 @@ func cli() {
 }
 
 func main() {
-	config()
+	gWorkDir, gTaskFile, gDisplay = config()
 	cli()
 }

@@ -11,6 +11,8 @@ code_copy:
     - deploy
 build_ledger:
   stage: test
-  script: go build
+  script: 
+    - cd /home/devops/code/goledger/
+    - go build
   tags:
     - deploy
