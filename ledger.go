@@ -105,7 +105,7 @@ func dumpTask(format *string) {
 	}
 }
 
-func listTask(long *bool) {
+func listTask(oLong *bool, oAll *bool) {
 	var taskArray []Task
 	f, err := os.Open(gTaskFile)
 	if err != nil {
@@ -123,15 +123,20 @@ func listTask(long *bool) {
 		}
 		taskArray = append(taskArray, msg)
 	}
-	fmt.Fprintln(gDisplay, "ID\tOPENED\tTASK")
+
+	fmt.Fprintln(gDisplay, "ID\tOPENED\tSTATUS\tTASK")
+
+	var tID string
+
 	for _, task := range taskArray {
-		var tID string
-		if *long == true {
+		if *oLong == true {
 			tID = task.TaskID
 		} else {
-			tID = fmt.Sprintf("%s..", task.TaskID[32:39])
+			tID = fmt.Sprintf("%s..", task.TaskID[0:7])
 		}
-		if task.Closed == 0 {
+		if *oAll == true {
+			fmt.Fprintf(gDisplay, "%s\t%v\t%s\n", tID, time.Unix(task.Opened, 0), task.Desc)
+		} else if task.Closed == 0 {
 			fmt.Fprintf(gDisplay, "%s\t%v\t%s\n", tID, time.Unix(task.Opened, 0), task.Desc)
 		}
 	}
@@ -155,13 +160,14 @@ func cli() {
 	listCmd := flag.NewFlagSet("ls", flag.ExitOnError)
 
 	// addCmd
-	autoClosePtr := addCmd.Bool("closed", false, "automatically close a new task")
+	autoCloseAddPtr := addCmd.Bool("closed", false, "automatically close a new task")
 
 	// dumpCmd
-	formatPtr := dumpCmd.String("format", "text", "<text|json|yaml>")
+	formatDumpPtr := dumpCmd.String("format", "text", "<text|json|yaml>")
 
 	// listCmd
-	longPtr := listCmd.Bool("l", false, "print long ID")
+	longListPtr := listCmd.Bool("l", false, "print long ID")
+	allListPtr := listCmd.Bool("a", false, "print long ID")
 
 	// verify subcommand provided
 	if len(os.Args) < 2 {
@@ -183,11 +189,11 @@ func cli() {
 	}
 
 	if addCmd.Parsed() {
-		addTask(autoClosePtr, addCmd.Args())
+		addTask(autoCloseAddPtr, addCmd.Args())
 	} else if dumpCmd.Parsed() {
-		dumpTask(formatPtr)
+		dumpTask(formatDumpPtr)
 	} else if listCmd.Parsed() {
-		listTask(longPtr)
+		listTask(longListPtr, allListPtr)
 	}
 }
 
