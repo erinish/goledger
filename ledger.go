@@ -132,7 +132,7 @@ func listTask(long *bool) {
 			tID = fmt.Sprintf("%s..", task.TaskID[32:39])
 		}
 		if task.Closed == 0 {
-			fmt.Fprintf(gDisplay, "%s\t%v\t%s\n", tID, task.Opened, task.Desc)
+			fmt.Fprintf(gDisplay, "%s\t%v\t%s\n", tID, time.Unix(task.Opened, 0), task.Desc)
 		}
 	}
 	gDisplay.Flush()
