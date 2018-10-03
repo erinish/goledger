@@ -170,13 +170,13 @@ func listTask(oLong *bool, oAll *bool) {
 
 func rmTask(args []string) {
 	taskSlice := getTasks()
-	fmt.Println(args[0])
 	taskIndex, err := matchTaskID(args[0], taskSlice)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
-
-	fmt.Printf("%v", taskSlice[taskIndex])
+	taskSlice = append(taskSlice[:taskIndex], taskSlice[taskIndex+1:]...)
+	fmt.Printf("%v", taskSlice)
 }
 
 func cli() {
