@@ -41,9 +41,7 @@ func matchTaskID(s string, tasks []Task) (int, error) {
 	matches := 0
 	matchIdx := 0
 	for i, t := range tasks {
-		fmt.Println(t.TaskID[0 : len(s)-1])
-		fmt.Println(s)
-		if t.TaskID[0:len(s)-1] == s {
+		if t.TaskID[0:len(s)] == s {
 			matches++
 			matchIdx = i
 		}
