@@ -173,6 +173,7 @@ func rmTask(args []string) {
 	fmt.Println(args[0])
 	taskIndex, err := matchTaskID(args[0], taskSlice)
 	if err != nil {
+		fmt.Println("err on rm")
 		os.Exit(1)
 	}
 
