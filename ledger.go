@@ -190,6 +190,7 @@ func rmTask(args []string) {
 	var j []byte
 	for _, task := range taskSlice {
 		j, err = json.Marshal(&task)
+		fmt.Printf("%v", j)
 		w.Write(j)
 		w.WriteString("\n")
 	}
