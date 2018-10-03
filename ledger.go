@@ -175,7 +175,7 @@ func rmTask(args []string) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	removed := taskSlice[taskIndex]
+	//	removed := taskSlice[taskIndex]
 	taskSlice = append(taskSlice[:taskIndex], taskSlice[taskIndex+1:]...)
 
 	// open file for truncated writing
@@ -194,7 +194,7 @@ func rmTask(args []string) {
 		w.WriteString("\n")
 	}
 	w.Flush()
-	fmt.Println(removed)
+	//fmt.Println(removed)
 }
 
 func cli() {
