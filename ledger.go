@@ -170,6 +170,7 @@ func listTask(oLong *bool, oAll *bool) {
 
 func rmTask(args []string) {
 	taskSlice := getTasks()
+	fmt.Println(args[0])
 	taskIndex, err := matchTaskID(args[0], taskSlice)
 	if err != nil {
 		os.Exit(1)
