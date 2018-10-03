@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/sha1"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"math/rand"
@@ -34,6 +35,24 @@ func genTaskID() string {
 	h.Write([]byte(string(rand.Intn(1000000))))
 	taskid := fmt.Sprintf("%x", h.Sum(nil))
 	return taskid
+}
+
+func matchTaskID(s string, tasks []Task) (int, error) {
+	matches := 0
+	matchIdx := 0
+	for i, t := range tasks {
+		if t.TaskID[0:len(s)-1] == s {
+			matches++
+			matchIdx = i
+		}
+	}
+
+	if matches == 0 {
+		return -1, errors.New("no matches")
+	} else if matches > 1 {
+		return -1, errors.New("too many matches")
+	}
+	return matchIdx, nil
 }
 
 func config() (string, string, *tabwriter.Writer) {
@@ -105,8 +124,8 @@ func dumpTask(format *string) {
 	}
 }
 
-func listTask(oLong *bool, oAll *bool) {
-	var taskArray []Task
+func getTasks() []Task {
+	var taskSlice []Task
 	f, err := os.Open(gTaskFile)
 	if err != nil {
 		fmt.Println("could not open file.")
@@ -121,14 +140,20 @@ func listTask(oLong *bool, oAll *bool) {
 			fmt.Println("error unmarshalling JSON")
 			os.Exit(1)
 		}
-		taskArray = append(taskArray, msg)
+		taskSlice = append(taskSlice, msg)
 	}
+	return taskSlice
+}
+
+func listTask(oLong *bool, oAll *bool) {
+
+	taskSlice := getTasks()
 
 	fmt.Fprintln(gDisplay, "ID\tOPENED\tSTATUS\tTASK")
 
 	var tID string
 
-	for _, task := range taskArray {
+	for _, task := range taskSlice {
 		if *oLong == true {
 			tID = task.TaskID
 		} else {
@@ -143,6 +168,16 @@ func listTask(oLong *bool, oAll *bool) {
 	gDisplay.Flush()
 }
 
+func rmTask(args []string) {
+	taskSlice := getTasks()
+	taskIndex, err := matchTaskID(args[0], taskSlice)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	fmt.Printf("%v", taskSlice[taskIndex])
+}
+
 func cli() {
 
 	// override default Usage
@@ -151,6 +186,7 @@ func cli() {
 		fmt.Fprintf(os.Stderr, "\tadd\t\tadd a new task\n")
 		fmt.Fprintf(os.Stderr, "\tdump\t\tdump contents of task file\n")
 		fmt.Fprintf(os.Stderr, "\tls\t\tdisplay list of tasks\n")
+		fmt.Fprintf(os.Stderr, "\trm\t\tremove a task\n")
 		fmt.Fprintf(os.Stderr, "\thelp\t\tdisplay this help text\n")
 		os.Exit(1)
 	}
@@ -158,6 +194,7 @@ func cli() {
 	addCmd := flag.NewFlagSet("add", flag.ExitOnError)
 	dumpCmd := flag.NewFlagSet("dump", flag.ExitOnError)
 	listCmd := flag.NewFlagSet("ls", flag.ExitOnError)
+	rmCmd := flag.NewFlagSet("rm", flag.ExitOnError)
 
 	// addCmd
 	autoCloseAddPtr := addCmd.Bool("closed", false, "automatically close a new task")
@@ -181,6 +218,8 @@ func cli() {
 		dumpCmd.Parse(os.Args[2:])
 	case "ls":
 		listCmd.Parse(os.Args[2:])
+	case "rm":
+		rmCmd.Parse(os.Args[2:])
 	case "--help", "-h", "help":
 		flag.Usage()
 	default:
@@ -194,6 +233,8 @@ func cli() {
 		dumpTask(formatDumpPtr)
 	} else if listCmd.Parsed() {
 		listTask(longListPtr, allListPtr)
+	} else if rmCmd.Parsed() {
+		rmTask(rmCmd.Args())
 	}
 }
 
