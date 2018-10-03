@@ -37,6 +37,27 @@ func genTaskID() string {
 	return taskid
 }
 
+func getTasks() []Task {
+	var taskSlice []Task
+	f, err := os.Open(gTaskFile)
+	if err != nil {
+		fmt.Println("could not open file.")
+		os.Exit(1)
+	}
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		var msg Task
+		err := json.Unmarshal(scanner.Bytes(), &msg)
+		if err != nil {
+			fmt.Println("error unmarshalling JSON")
+			os.Exit(1)
+		}
+		taskSlice = append(taskSlice, msg)
+	}
+	return taskSlice
+}
+
 func matchTaskID(s string, tasks []Task) (int, error) {
 	matches := 0
 	matchIdx := 0
@@ -124,27 +145,6 @@ func dumpTask(format *string) {
 	}
 }
 
-func getTasks() []Task {
-	var taskSlice []Task
-	f, err := os.Open(gTaskFile)
-	if err != nil {
-		fmt.Println("could not open file.")
-		os.Exit(1)
-	}
-
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		var msg Task
-		err := json.Unmarshal(scanner.Bytes(), &msg)
-		if err != nil {
-			fmt.Println("error unmarshalling JSON")
-			os.Exit(1)
-		}
-		taskSlice = append(taskSlice, msg)
-	}
-	return taskSlice
-}
-
 func listTask(oLong *bool, oAll *bool) {
 
 	taskSlice := getTasks()
@@ -175,8 +175,26 @@ func rmTask(args []string) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	removed := taskSlice[taskIndex]
 	taskSlice = append(taskSlice[:taskIndex], taskSlice[taskIndex+1:]...)
-	fmt.Printf("%v", taskSlice)
+
+	// open file for truncated writing
+	f, err := os.OpenFile(gTaskFile, os.O_WRONLY, 0777)
+	if err != nil {
+		fmt.Println("error opening file for writing")
+	}
+
+	w := bufio.NewWriter(f)
+	defer f.Close()
+
+	var j []byte
+	for _, task := range taskSlice {
+		j, err = json.Marshal(&task)
+		w.Write(j)
+		w.WriteString("\n")
+	}
+	w.Flush()
+	fmt.Println(removed)
 }
 
 func cli() {
