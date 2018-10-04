@@ -58,6 +58,25 @@ func getTasks() []Task {
 	return taskSlice
 }
 
+func writeTasks(tasks []Task) {
+	os.Truncate(gTaskFile, 0)
+	f, err := os.OpenFile(gTaskFile, os.O_WRONLY, 0777)
+	if err != nil {
+		fmt.Println("error opening file for writing")
+	}
+
+	w := bufio.NewWriter(f)
+	defer f.Close()
+
+	var j []byte
+	for _, task := range tasks {
+		j, err = json.Marshal(&task)
+		w.Write(j)
+		w.WriteString("\n")
+	}
+	w.Flush()
+}
+
 func matchTaskID(s string, tasks []Task) (int, error) {
 	matches := 0
 	matchIdx := 0
@@ -159,10 +178,11 @@ func listTask(oLong *bool, oAll *bool) {
 		} else {
 			tID = fmt.Sprintf("%s..", task.TaskID[0:7])
 		}
-		if *oAll == true {
-			fmt.Fprintf(gDisplay, "%s\t%v\t%s\n", tID, time.Unix(task.Opened, 0), task.Desc)
-		} else if task.Closed == 0 {
-			fmt.Fprintf(gDisplay, "%s\t%v\t%s\n", tID, time.Unix(task.Opened, 0), task.Desc)
+
+		if *oAll == true && task.Closed > 0 {
+			fmt.Fprintf(gDisplay, "%s\t%v\tclosed\t%s\n", tID, time.Unix(task.Opened, 0), task.Desc)
+		} else {
+			fmt.Fprintf(gDisplay, "%s\t%v\topen\t%s\n", tID, time.Unix(task.Opened, 0), task.Desc)
 		}
 	}
 	gDisplay.Flush()
@@ -175,27 +195,19 @@ func rmTask(args []string) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	//	removed := taskSlice[taskIndex]
 	taskSlice = append(taskSlice[:taskIndex], taskSlice[taskIndex+1:]...)
+	writeTasks(taskSlice)
+}
 
-	// open file for truncated writing
-	f, err := os.OpenFile(gTaskFile, os.O_WRONLY, 0777)
+func clTask(args []string) {
+	taskSlice := getTasks()
+	taskIndex, err := matchTaskID(args[0], taskSlice)
 	if err != nil {
-		fmt.Println("error opening file for writing")
+		fmt.Println(err)
+		os.Exit(1)
 	}
-
-	w := bufio.NewWriter(f)
-	defer f.Close()
-
-	var j []byte
-	for _, task := range taskSlice {
-		j, err = json.Marshal(&task)
-		fmt.Printf("%v", j)
-		w.Write(j)
-		w.WriteString("\n")
-	}
-	w.Flush()
-	//fmt.Println(removed)
+	taskSlice[taskIndex].Closed = time.Now().Unix()
+	writeTasks(taskSlice)
 }
 
 func cli() {
@@ -204,6 +216,7 @@ func cli() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "\tadd\t\tadd a new task\n")
+		fmt.Fprintf(os.Stderr, "\tcl\t\tclose a new task\n")
 		fmt.Fprintf(os.Stderr, "\tdump\t\tdump contents of task file\n")
 		fmt.Fprintf(os.Stderr, "\tls\t\tdisplay list of tasks\n")
 		fmt.Fprintf(os.Stderr, "\trm\t\tremove a task\n")
@@ -215,6 +228,7 @@ func cli() {
 	dumpCmd := flag.NewFlagSet("dump", flag.ExitOnError)
 	listCmd := flag.NewFlagSet("ls", flag.ExitOnError)
 	rmCmd := flag.NewFlagSet("rm", flag.ExitOnError)
+	clCmd := flag.NewFlagSet("cl", flag.ExitOnError)
 
 	// addCmd
 	autoCloseAddPtr := addCmd.Bool("closed", false, "automatically close a new task")
@@ -234,6 +248,8 @@ func cli() {
 	switch os.Args[1] {
 	case "add":
 		addCmd.Parse(os.Args[2:])
+	case "cl":
+		clCmd.Parse(os.Args[2:])
 	case "dump":
 		dumpCmd.Parse(os.Args[2:])
 	case "ls":
@@ -249,6 +265,8 @@ func cli() {
 
 	if addCmd.Parsed() {
 		addTask(autoCloseAddPtr, addCmd.Args())
+	} else if clCmd.Parsed() {
+		clTask(clCmd.Args())
 	} else if dumpCmd.Parsed() {
 		dumpTask(formatDumpPtr)
 	} else if listCmd.Parsed() {
