@@ -181,7 +181,7 @@ func listTask(oLong *bool, oAll *bool) {
 
 		if *oAll == true && task.Closed > 0 {
 			fmt.Fprintf(gDisplay, "%s\t%v\tclosed\t%s\n", tID, time.Unix(task.Opened, 0), task.Desc)
-		} else {
+		} else if task.Closed == 0 {
 			fmt.Fprintf(gDisplay, "%s\t%v\topen\t%s\n", tID, time.Unix(task.Opened, 0), task.Desc)
 		}
 	}
