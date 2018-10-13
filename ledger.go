@@ -188,6 +188,17 @@ func listTask(oLong *bool, oAll *bool) {
 	gDisplay.Flush()
 }
 
+func rptTask(oDays *int64) {
+	taskSlice := getTasks()
+	daysAgoSecs := *oDays * 86400
+	for _, task := range taskSlice {
+		if task.Closed > (time.Now().Unix() - daysAgoSecs) {
+			fmt.Fprintf(gDisplay, "-\t%s\n", task.Desc)
+		}
+	}
+	gDisplay.Flush()
+}
+
 func rmTask(args []string) {
 	taskSlice := getTasks()
 	taskIndex, err := matchTaskID(args[0], taskSlice)
@@ -220,6 +231,7 @@ func cli() {
 		fmt.Fprintf(os.Stderr, "\tdump\t\tdump contents of task file\n")
 		fmt.Fprintf(os.Stderr, "\tls\t\tdisplay list of tasks\n")
 		fmt.Fprintf(os.Stderr, "\trm\t\tremove a task\n")
+		fmt.Fprintf(os.Stderr, "\trpt\t\treport tasks\n")
 		fmt.Fprintf(os.Stderr, "\thelp\t\tdisplay this help text\n")
 		os.Exit(1)
 	}
@@ -228,6 +240,7 @@ func cli() {
 	dumpCmd := flag.NewFlagSet("dump", flag.ExitOnError)
 	listCmd := flag.NewFlagSet("ls", flag.ExitOnError)
 	rmCmd := flag.NewFlagSet("rm", flag.ExitOnError)
+	rptCmd := flag.NewFlagSet("rpt", flag.ExitOnError)
 	clCmd := flag.NewFlagSet("cl", flag.ExitOnError)
 
 	// addCmd
@@ -239,6 +252,9 @@ func cli() {
 	// listCmd
 	longListPtr := listCmd.Bool("l", false, "print long ID")
 	allListPtr := listCmd.Bool("a", false, "print long ID")
+
+	// rptCmd
+	daysRptPtr := rptCmd.Int64("d", 7, "number of days previous to report")
 
 	// verify subcommand provided
 	if len(os.Args) < 2 {
@@ -256,6 +272,8 @@ func cli() {
 		listCmd.Parse(os.Args[2:])
 	case "rm":
 		rmCmd.Parse(os.Args[2:])
+	case "rpt":
+		rptCmd.Parse(os.Args[2:])
 	case "--help", "-h", "help":
 		flag.Usage()
 	default:
@@ -273,6 +291,8 @@ func cli() {
 		listTask(longListPtr, allListPtr)
 	} else if rmCmd.Parsed() {
 		rmTask(rmCmd.Args())
+	} else if rptCmd.Parsed() {
+		rptTask(daysRptPtr)
 	}
 }
 
